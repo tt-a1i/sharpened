@@ -1,20 +1,20 @@
 {
-  "name": "superpowers",
-  "description": "Core skills library for Claude Code: TDD, debugging, collaboration patterns, and proven techniques",
-  "version": "5.0.7",
+  "name": "sharpened",
+  "description": "Battle-tested skills library: AI-specific TDD and delivery discipline forged from real production sessions. Fork of obra/superpowers.",
+  "version": "5.0.7-sharp.0",
   "author": {
-    "name": "Jesse Vincent",
-    "email": "jesse@fsck.com"
+    "name": "Shaokun Tu",
+    "email": "shaokun.tu@shanda.com"
   },
-  "homepage": "https://github.com/obra/superpowers",
-  "repository": "https://github.com/obra/superpowers",
+  "homepage": "https://github.com/tt-a1i/sharpened",
+  "repository": "https://github.com/tt-a1i/sharpened",
   "license": "MIT",
   "keywords": [
     "skills",
     "tdd",
-    "debugging",
-    "collaboration",
-    "best-practices",
+    "reverse-regression",
+    "anti-patterns",
+    "ai-discipline",
     "workflows"
   ]
 }

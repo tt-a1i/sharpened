@@ -1,198 +1,68 @@
-# Superpowers
+# Sharpened
 
-Superpowers is a complete software development methodology for your coding agents, built on top of a set of composable skills and some initial instructions that make sure your agent uses them.
+**Battle-tested skills library for AI coding agents.** A fork of [obra/superpowers](https://github.com/obra/superpowers) (MIT, © Jesse Vincent) with AI-specific hardening learned from real production sessions.
 
-## How it works
+## Why fork
 
-It starts from the moment you fire up your coding agent. As soon as it sees that you're building something, it *doesn't* just jump into trying to write code. Instead, it steps back and asks you what you're really trying to do. 
+Superpowers gives coding agents a solid methodology: brainstorming → plan → subagent-driven execution → review → done, with TDD and YAGNI as principles. It works.
 
-Once it's teased a spec out of the conversation, it shows it to you in chunks short enough to actually read and digest. 
+**But it was written for humans doing TDD.** In real production use with AI coding agents, we kept hitting failure modes the stock skills don't defend against:
 
-After you've signed off on the design, your agent puts together an implementation plan that's clear enough for an enthusiastic junior engineer with poor taste, no judgement, no project context, and an aversion to testing to follow. It emphasizes true red/green TDD, YAGNI (You Aren't Gonna Need It), and DRY. 
+1. **Tautological assertions** — `expect(output).not.toContain(orchestratorId)` passes trivially when the template never contains a UUID to begin with. Stock TDD's "watch it fail once" doesn't catch this because the test was always going to be green.
+2. **Spy at wrong layer** — test asserts the idempotent guard in module A fires, but the actual guard is in module B. Removing guard A leaves the test green.
+3. **Reporting drift** — agent claims "109 tests pass" when vitest actually reports 105. Claims "fixed" a field that never made it to schema. Deletes a test to stay green without saying so.
+4. **Scope creep** — task says "extract a helper"; agent also fixes three unrelated bugs and refactors a sibling module. CI stays green, next PR becomes unreviewable.
+5. **Anti-patterns as a fixed list** — stock skills ship with 5 anti-patterns frozen at author's last commit. Real projects need the list to grow every time a new failure mode appears.
 
-Next up, once you say "go", it launches a *subagent-driven-development* process, having agents work through each engineering task, inspecting and reviewing their work, and continuing forward. It's not uncommon for Claude to be able to work autonomously for a couple hours at a time without deviating from the plan you put together.
+Sharpened is the skill set that emerged after ~15 rounds of forcing fixes to these modes. The diffs vs. upstream aren't large; the philosophy is.
 
-There's a bunch more to it, but that's the core of the system. And because the skills trigger automatically, you don't need to do anything special. Your coding agent just has Superpowers.
+## Core additions / changes vs. superpowers
 
+| Skill | Change |
+|---|---|
+| `test-driven-development` | **Reverse-regression is mandatory:** every new assertion must red-on-comment-out of the corresponding product-code line, green on restore. Integration tests forbid mock-pty-style chains. Anti-patterns list grows — project-local `anti-patterns.md` is versioned with the repo. |
+| `verification-before-completion` | **Numbers are verbatim to tool output.** Deleted tests must be listed with reason. Completion is per-item verdict (done / partial / skipped + evidence), not a blanket "basically done". |
+| `scope-guardrails` (new) | **PR-X only does PR-X.** Accidental fixes to unrelated issues go into a follow-up PR or get reverted. `git status` must match the task manifest. |
 
-## Sponsorship
+Everything else from superpowers is preserved.
 
-If Superpowers has helped you do stuff that makes money and you are so inclined, I'd greatly appreciate it if you'd consider [sponsoring my opensource work](https://github.com/sponsors/obra).
+## Install
 
-Thanks! 
-
-- Jesse
-
-
-## Installation
-
-**Note:** Installation differs by platform. 
-
-### Claude Code Official Marketplace
-
-Superpowers is available via the [official Claude plugin marketplace](https://claude.com/plugins/superpowers)
-
-Install the plugin from Anthropic's official marketplace:
-
+### Claude Code
 ```bash
-/plugin install superpowers@claude-plugins-official
-```
+# From GitHub (once plugin marketplace supports custom sources)
+/plugin marketplace add tt-a1i/sharpened
+/plugin install sharpened
 
-### Claude Code (Superpowers Marketplace)
-
-The Superpowers marketplace provides Superpowers and some other related plugins for Claude Code.
-
-In Claude Code, register the marketplace first:
-
-```bash
-/plugin marketplace add obra/superpowers-marketplace
-```
-
-Then install the plugin from this marketplace:
-
-```bash
-/plugin install superpowers@superpowers-marketplace
-```
-
-### OpenAI Codex CLI
-
-- Open plugin search interface
-
-```bash
-/plugins
-```
-
-Search for Superpowers
-
-```bash
-superpowers
-```
-
-Select `Install Plugin`
-
-### OpenAI Codex App
-
-- In the Codex app, click on Plugins in the sidebar.
-- You should see `Superpowers` in the Coding section. 
-- Click the `+` next to Superpowers and follow the prompts.
-
-
-### Cursor (via Plugin Marketplace)
-
-In Cursor Agent chat, install from marketplace:
-
-```text
-/add-plugin superpowers
-```
-
-or search for "superpowers" in the plugin marketplace.
-
-### OpenCode
-
-Tell OpenCode:
-
-```
-Fetch and follow instructions from https://raw.githubusercontent.com/obra/superpowers/refs/heads/main/.opencode/INSTALL.md
-```
-
-**Detailed docs:** [docs/README.opencode.md](docs/README.opencode.md)
-
-### GitHub Copilot CLI
-
-```bash
-copilot plugin marketplace add obra/superpowers-marketplace
-copilot plugin install superpowers@superpowers-marketplace
+# Or local dev
+git clone https://github.com/tt-a1i/sharpened.git ~/.claude/plugins/cache/sharpened/1.0.0
 ```
 
 ### Gemini CLI
-
 ```bash
-gemini extensions install https://github.com/obra/superpowers
+gemini extensions install https://github.com/tt-a1i/sharpened
 ```
 
-To update:
+### OpenCode / Codex
+See `.opencode/INSTALL.md` for bootstrap injection (inherits superpowers' multi-CLI support).
 
-```bash
-gemini extensions update superpowers
-```
+## Relationship to upstream
 
-## The Basic Workflow
-
-1. **brainstorming** - Activates before writing code. Refines rough ideas through questions, explores alternatives, presents design in sections for validation. Saves design document.
-
-2. **using-git-worktrees** - Activates after design approval. Creates isolated workspace on new branch, runs project setup, verifies clean test baseline.
-
-3. **writing-plans** - Activates with approved design. Breaks work into bite-sized tasks (2-5 minutes each). Every task has exact file paths, complete code, verification steps.
-
-4. **subagent-driven-development** or **executing-plans** - Activates with plan. Dispatches fresh subagent per task with two-stage review (spec compliance, then code quality), or executes in batches with human checkpoints.
-
-5. **test-driven-development** - Activates during implementation. Enforces RED-GREEN-REFACTOR: write failing test, watch it fail, write minimal code, watch it pass, commit. Deletes code written before tests.
-
-6. **requesting-code-review** - Activates between tasks. Reviews against plan, reports issues by severity. Critical issues block progress.
-
-7. **finishing-a-development-branch** - Activates when tasks complete. Verifies tests, presents options (merge/PR/keep/discard), cleans up worktree.
-
-**The agent checks for relevant skills before any task.** Mandatory workflows, not suggestions.
-
-## What's Inside
-
-### Skills Library
-
-**Testing**
-- **test-driven-development** - RED-GREEN-REFACTOR cycle (includes testing anti-patterns reference)
-
-**Debugging**
-- **systematic-debugging** - 4-phase root cause process (includes root-cause-tracing, defense-in-depth, condition-based-waiting techniques)
-- **verification-before-completion** - Ensure it's actually fixed
-
-**Collaboration** 
-- **brainstorming** - Socratic design refinement
-- **writing-plans** - Detailed implementation plans
-- **executing-plans** - Batch execution with checkpoints
-- **dispatching-parallel-agents** - Concurrent subagent workflows
-- **requesting-code-review** - Pre-review checklist
-- **receiving-code-review** - Responding to feedback
-- **using-git-worktrees** - Parallel development branches
-- **finishing-a-development-branch** - Merge/PR decision workflow
-- **subagent-driven-development** - Fast iteration with two-stage review (spec compliance, then code quality)
-
-**Meta**
-- **writing-skills** - Create new skills following best practices (includes testing methodology)
-- **using-superpowers** - Introduction to the skills system
+- **License:** MIT. Upstream copyright © Jesse Vincent; derivative work © Shaokun Tu.
+- **Attribution:** every skill that is a modified version of an upstream skill retains a `> Adapted from obra/superpowers` note at top.
+- **Sync policy:** we cherry-pick from upstream when skill content is updated; we do not auto-merge, because upstream's open PR backlog on TDD improvements suggests divergent quality bars.
+- **Issues / PRs back upstream:** if a sharpened change is pure bug-fix (not an opinion), we file it upstream too.
 
 ## Philosophy
 
-- **Test-Driven Development** - Write tests first, always
-- **Systematic over ad-hoc** - Process over guessing
-- **Complexity reduction** - Simplicity as primary goal
-- **Evidence over claims** - Verify before declaring success
+Human engineering conventions assume code is read many times, developers have cross-session memory, and code review catches drift. None of that is true for AI coding agents across sessions.
 
-Read [the original release announcement](https://blog.fsck.com/2025/10/09/superpowers/).
+**Sharpened's thesis:** the rules that matter are the ones machines can verify (`grep`, `wc -l`, reverse-regression). Soft guidance ("mocks only if unavoidable") becomes hard rules ("`grep mock-node-pty tests/server/` returns zero"). The anti-patterns list grows every time an agent gets caught, and grows only. Nothing gets deleted because a future agent will always try the same trick again.
 
-## Contributing
+## Sponsorship
 
-The general contribution process for Superpowers is below. Keep in mind that we don't generally accept contributions of new skills and that any updates to skills must work across all of the coding agents we support.
-
-1. Fork the repository
-2. Switch to the 'dev' branch
-3. Create a branch for your work
-4. Follow the `writing-skills` skill for creating and testing new and modified skills
-5. Submit a PR, being sure to fill in the pull request template.
-
-See `skills/writing-skills/SKILL.md` for the complete guide.
-
-## Updating
-
-Superpowers updates are somewhat coding-agent dependent, but are often automatic.
+Upstream author accepts sponsorship: [obra on GitHub Sponsors](https://github.com/sponsors/obra). Sharpened has none.
 
 ## License
 
-MIT License - see LICENSE file for details
-
-## Community
-
-Superpowers is built by [Jesse Vincent](https://blog.fsck.com) and the rest of the folks at [Prime Radiant](https://primeradiant.com).
-
-- **Discord**: [Join us](https://discord.gg/35wsABTejz) for community support, questions, and sharing what you're building with Superpowers
-- **Issues**: https://github.com/obra/superpowers/issues
-- **Release announcements**: [Sign up](https://primeradiant.com/superpowers/) to get notified about new versions
+MIT. See [LICENSE](./LICENSE).

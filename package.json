@@ -1,6 +1,6 @@
 {
-  "name": "superpowers",
-  "version": "5.0.7",
+  "name": "sharpened",
+  "version": "5.0.7-sharp.0",
   "type": "module",
   "main": ".opencode/plugins/superpowers.js"
 }
